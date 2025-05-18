@@ -285,7 +285,8 @@ public final class RegistryData {
             {
                 final String collision = main.getString("collisionShape");
                 final String occlusion = main.getString("occlusionShape");
-                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, this);
+                final String model = main.getString("shape");
+                this.shape = CollisionUtils.parseBlockShape(collision, occlusion, model, this);
             }
             this.redstoneConductor = main.getBoolean("redstoneConductor");
             this.signalSource = main.getBoolean("signalSource", false);
