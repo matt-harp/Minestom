@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public record ShapeImpl(CollisionData collisionData, LightData lightData) implements Shape {
+public record ShapeImpl(CollisionData collisionData, LightData lightData, ModelData modelData) implements Shape {
     private static final Pattern PATTERN = Pattern.compile("\\d.\\d+", Pattern.MULTILINE);
 
     record CollisionData(List<BoundingBox> collisionBoundingBoxes,
@@ -29,6 +29,13 @@ public record ShapeImpl(CollisionData collisionData, LightData lightData) implem
                      byte lightEmission) {
         public LightData {
             occlusionBoundingBoxes = List.copyOf(occlusionBoundingBoxes);
+        }
+    }
+
+    record ModelData(List<BoundingBox> modelBoundingBoxes,
+                     Point relativeStart, Point relativeEnd) {
+        public ModelData {
+            modelBoundingBoxes = List.copyOf(modelBoundingBoxes);
         }
     }
 
@@ -141,12 +148,24 @@ public record ShapeImpl(CollisionData collisionData, LightData lightData) implem
         return lightData.occlusionBoundingBoxes;
     }
 
-    static ShapeImpl parseBlockFromRegistry(String collision, String occlusion, boolean occludes, byte lightEmission) {
+    /**
+     * Gets the model bounding boxes for this block. This changes if the model view changes e.g. buttons pressed vs
+     * unpressed
+     *
+     * @return the model bounding boxes for this block
+     */
+    public @NotNull @Unmodifiable List<BoundingBox> modelBoundingBoxes() {
+        return modelData.modelBoundingBoxes;
+    }
+
+    static ShapeImpl parseBlockFromRegistry(String collision, String occlusion, String model, boolean occludes, byte lightEmission) {
         BoundingBox[] collisionBoundingBoxes = parseRegistryBoundingBoxString(collision);
         BoundingBox[] occlusionBoundingBoxes = occludes ? parseRegistryBoundingBoxString(occlusion) : new BoundingBox[0];
+        BoundingBox[] modelBoundingBoxes = parseRegistryBoundingBoxString(model);
         final CollisionData collisionData = collisionData(List.of(collisionBoundingBoxes));
         final LightData lightData = lightData(List.of(occlusionBoundingBoxes), lightEmission);
-        return new ShapeImpl(collisionData, lightData);
+        final ModelData modelData = modelData(List.of(modelBoundingBoxes));
+        return new ShapeImpl(collisionData, lightData, modelData);
     }
 
     private static BoundingBox[] parseRegistryBoundingBoxString(String str) {
@@ -220,6 +239,32 @@ public record ShapeImpl(CollisionData collisionData, LightData lightData) implem
             airFaces |= ((res == 0) ? 0b1 : 0b0) << (byte) f.ordinal();
         }
         return new LightData(occlusionBoundingBoxes, fullFaces, airFaces, lightEmission);
+    }
+
+    private static ModelData modelData(List<BoundingBox> collisionBoundingBoxes) {
+        // Find bounds of model
+        Vec relativeStart;
+        Vec relativeEnd;
+        if (!collisionBoundingBoxes.isEmpty()) {
+            double minX = 1, minY = 1, minZ = 1;
+            double maxX = 0, maxY = 0, maxZ = 0;
+            for (BoundingBox blockSection : collisionBoundingBoxes) {
+                // Min
+                if (blockSection.minX() < minX) minX = blockSection.minX();
+                if (blockSection.minY() < minY) minY = blockSection.minY();
+                if (blockSection.minZ() < minZ) minZ = blockSection.minZ();
+                // Max
+                if (blockSection.maxX() > maxX) maxX = blockSection.maxX();
+                if (blockSection.maxY() > maxY) maxY = blockSection.maxY();
+                if (blockSection.maxZ() > maxZ) maxZ = blockSection.maxZ();
+            }
+            relativeStart = new Vec(minX, minY, minZ);
+            relativeEnd = new Vec(maxX, maxY, maxZ);
+        } else {
+            relativeStart = Vec.ZERO;
+            relativeEnd = Vec.ZERO;
+        }
+        return new ModelData(collisionBoundingBoxes, relativeStart, relativeEnd);
     }
 
     private static @NotNull List<Rectangle> computeOcclusionSet(BlockFace face, List<BoundingBox> boundingBoxes) {

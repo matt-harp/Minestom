@@ -299,13 +299,15 @@ public final class RegistryData {
                 this.shape = fromParent(parent, BlockEntry::collisionShape, main, "collisionShape", (properties, string) -> {
                     String collision = properties.getString(string);
                     String occlusion = properties.getString("occlusionShape");
+                    String model = properties.getString("shape");
                     if (parent == null || parentProperties == null)  // No parent, so we can just parse the shape
-                        return CollisionUtils.parseBlockShape(internCache, collision, occlusion, occludes, this.lightEmission);
+                        return CollisionUtils.parseBlockShape(internCache, collision, occlusion, model, occludes, this.lightEmission);
                     // TODO make this condition just change the condition; like adding lightData if emission just changes.
-                    if (collision != null || occlusion != null || occludes != parent.occludes() || this.lightEmission != parent.lightEmission) {
+                    if (collision != null || occlusion != null || model != null || occludes != parent.occludes() || this.lightEmission != parent.lightEmission) {
                         if (collision == null) collision = parentProperties.getString(string);
                         if (occlusion == null) occlusion = parentProperties.getString("occlusionShape");
-                        return CollisionUtils.parseBlockShape(internCache, collision, occlusion, occludes, this.lightEmission);
+                        if (model == null) model = parentProperties.getString("shape");
+                        return CollisionUtils.parseBlockShape(internCache, collision, occlusion, model, occludes, this.lightEmission);
                     }
                     return parent.collisionShape();
                 }, null);

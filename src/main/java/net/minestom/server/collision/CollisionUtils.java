@@ -177,12 +177,12 @@ public final class CollisionUtils {
         return newPosition;
     }
 
-    public static Shape parseBlockShape(Map<Object, Object> internCache, String collision, String occlusion, boolean occludes, byte lightEmission) {
-        record ShapeEntry(String collision, String occlusion, boolean occludes, byte lightEmission) {} // Easy way to Hashcode
-        ShapeEntry entry = new ShapeEntry(collision, occlusion, occludes, lightEmission);
+    public static Shape parseBlockShape(Map<Object, Object> internCache, String collision, String occlusion, String model, boolean occludes, byte lightEmission) {
+        record ShapeEntry(String collision, String occlusion, String model, boolean occludes, byte lightEmission) {} // Easy way to Hashcode
+        ShapeEntry entry = new ShapeEntry(collision, occlusion, model, occludes, lightEmission);
         final Shape cachedShape = (Shape) internCache.get(entry);
         if (cachedShape != null) return cachedShape;
-        final Shape parsedShape = ShapeImpl.parseBlockFromRegistry(collision, occlusion, occludes, lightEmission);
+        final Shape parsedShape = ShapeImpl.parseBlockFromRegistry(collision, occlusion, model, occludes, lightEmission);
         internCache.put(entry, parsedShape);
         return (Shape) internCache.computeIfAbsent(parsedShape, k -> parsedShape);
     }
